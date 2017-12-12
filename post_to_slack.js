@@ -160,8 +160,9 @@ const work = (lane, manifest) => {
         err(err)
         manifest.errors = manifest.errors || [];
         manifest.errors.push(err);
-      });
-      .finally(() => $H.call('Lanes#end_shipment', lane, exitCode, manifest));
+      })
+      .finally(() => $H.call('Lanes#end_shipment', lane, exitCode, manifest))
+    ;
   });
 };
 
