@@ -150,21 +150,18 @@ const work = (lane, manifest) => {
 
   channels.forEach((channel) => {
     slack.chat.postMessage({ token, channel, username, text })
-      .then(
-        (res) => {
-          log(res)
-          exitCode = 0;
-          manifest.results = manifest.results || [];
-          manifest.results.push(res);
-          $H.call('Lanes#end_shipment', lane, exitCode, manifest);
-        },
-        (err) => {
-          err(err)
-          manifest.errors = manifest.errors || [];
-          manifest.errors.push(err);
-          $H.call('Lanes#end_shipment', lane, exitCode, manifest);
-        }
-      );
+      .then((res) => {
+        log(res)
+        exitCode = 0;
+        manifest.results = manifest.results || [];
+        manifest.results.push(res);
+      })
+      .catch((err) => {
+        err(err)
+        manifest.errors = manifest.errors || [];
+        manifest.errors.push(err);
+      });
+      .finally(() => $H.call('Lanes#end_shipment', lane, exitCode, manifest));
   });
 };
 
