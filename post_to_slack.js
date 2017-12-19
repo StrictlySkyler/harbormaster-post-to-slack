@@ -190,7 +190,7 @@ const work = (lane, manifest) => {
         $H.call('Lanes#end_shipment', lane, exitCode, manifest)
       })
       .catch((err) => {
-        err(err)
+        error(err)
         manifest.errors = manifest.errors || [];
         manifest.errors.push(err);
         $H.call('Lanes#end_shipment', lane, exitCode, manifest)
