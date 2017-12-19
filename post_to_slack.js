@@ -155,13 +155,14 @@ const work = (lane, manifest) => {
         exitCode = 0;
         manifest.results = manifest.results || [];
         manifest.results.push(res);
+        $H.call('Lanes#end_shipment', lane, exitCode, manifest)
       })
       .catch((err) => {
         err(err)
         manifest.errors = manifest.errors || [];
         manifest.errors.push(err);
+        $H.call('Lanes#end_shipment', lane, exitCode, manifest)
       })
-      .finally(() => $H.call('Lanes#end_shipment', lane, exitCode, manifest))
     ;
   });
 };
