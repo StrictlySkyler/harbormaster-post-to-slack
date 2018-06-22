@@ -193,23 +193,28 @@ const work = (lane, manifest) => {
   let channels = getChosenChannelIDs(manifest);
   let username = manifest.username;
   let text = fillReferenceText(manifest, manifest.message);
+  let promises = [];
 
   channels.forEach((channel) => {
-    slack.chat.postMessage({ token, channel, username, text })
+    promises.push(slack.chat.postMessage({ token, channel, username, text })
       .then((res) => {
         log(res)
-        exitCode = 0;
+        exitCode = exitCode ? exitCode : 0;
         manifest.results = manifest.results || [];
         manifest.results.push(res);
-        $H.call('Lanes#end_shipment', lane, exitCode, manifest)
       })
       .catch((err) => {
+        exitCode = exitCode || 1;
         error(err)
         manifest.errors = manifest.errors || [];
         manifest.errors.push(err);
-        $H.call('Lanes#end_shipment', lane, exitCode, manifest)
       })
-    ;
+    );
+  });
+
+  Promise.all(promises).then((values) => {
+    log(values);
+    $H.call('Lanes#end_shipment', lane, exitCode, manifest)
   });
 };
 
