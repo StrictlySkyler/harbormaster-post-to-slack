@@ -8,12 +8,14 @@ require('child_process').execSync(`npm i ${[
   'js-htmlencode',
   'debug',
   'slack',
+  'lodash',
 ].join(' ')}`);
 
 const log = require('debug')(`${name}:log`);
 const error = require('debug')(`${name}:error`);
 const encode = require('js-htmlencode').htmlEncode;
 const slack = require('slack');
+const _ = require('lodash');
 
 let channels = [];
 let users = [];
@@ -174,11 +176,23 @@ const update = (lane, values) => {
   return true;
 };
 
+const fillReferenceText = (manifest, text) => {
+  let referenceRegex = /\[\[([a-zA-Z0-9\.-_\+:]+)\]\]/g;
+
+  let referencedValueText = text.replace(referenceRegex, (match, target) => {
+    let value = _.get(manifest, target);
+    if (value) return JSON.stringify(value, null, '\t');
+    return;
+  });
+  return referencedValueText;
+};
+
+
 const work = (lane, manifest) => {
   let exitCode = 1;
   let channels = getChosenChannelIDs(manifest);
-  let username = manifest.username || undefined;
-  let text = manifest.message;
+  let username = manifest.username;
+  let text = fillReferenceText(manifest, manifest.message);
 
   channels.forEach((channel) => {
     slack.chat.postMessage({ token, channel, username, text })
@@ -206,3 +220,4 @@ module.exports = {
   update,
   work,
 };
+
