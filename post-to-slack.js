@@ -16,13 +16,25 @@ const encode = require('js-htmlencode').htmlEncode;
 const slack = require('slack');
 
 let channels = [];
+let users = [];
 
 log(`Dependencies installed for "${name}" harbor.`);
 
 const renderInput = (values) => {
   values = values || {};
 
-  slack.channels.list({ token }).then((res) => ( channels = res.channels ));
+  slack.channels.list({ token })
+    .then((res) => ( channels = res.channels ))
+    .catch((err) => console.error(err))
+  ;
+  slack.users.list({ token })
+    .then((res) => {
+      let latest_users = [];
+      res.members.forEach((user) => ( latest_users.push(user) ))
+      users = latest_users;
+    })
+    .catch((err) => console.error(err))
+  ;
 
   return `
     <style>
@@ -34,7 +46,8 @@ const renderInput = (values) => {
     <h4>Welcome to your Slack harbor!</h4>
     <div class="row">
       <h5 class="small-3 column">Channels to use:</h5>
-      <h5 class="small-8 column">Message to send:</h5>
+      <h5 class="small-3 column">Users to message:</h5>
+      <h5 class="small-5 column">Message to send:</h5>
     </div>
     <div class="row">
       <ol class="slack-channel-list small-3 columns">
@@ -54,12 +67,31 @@ const renderInput = (values) => {
           }).join('')
         }
       </ol>
-      <textarea
-        name=message
-        class="small-8 columns slack-message-input"
-        placeholder="(empty)"
-        required
-      >${values.message ? encode(values.message) : ''}</textarea>
+      <ol class="slack-user-list small-3 column">
+        ${
+          users.map((user) => {
+            return `<li>
+              <label>
+                <input
+                  name="${user.name}"
+                  type=checkbox
+                  value="${user.id}"
+                  ${values && values[user.name] ? 'checked' : ''}
+                >
+                ${user.name}
+              </label>
+            </li>\n`;
+          }).join('')
+        }
+      </ol>
+      <div class="small-5 column">
+        <textarea
+          name=message
+          class="slack-message-input"
+          placeholder="(empty)"
+          required
+        >${values.message ? encode(values.message) : ''}</textarea>
+      </div>
     </div>
     <label>
       <span>As username (optional):</span>
@@ -155,13 +187,14 @@ const work = (lane, manifest) => {
         exitCode = 0;
         manifest.results = manifest.results || [];
         manifest.results.push(res);
+        $H.call('Lanes#end_shipment', lane, exitCode, manifest)
       })
       .catch((err) => {
-        err(err)
+        error(err)
         manifest.errors = manifest.errors || [];
         manifest.errors.push(err);
+        $H.call('Lanes#end_shipment', lane, exitCode, manifest)
       })
-      .finally(() => $H.call('Lanes#end_shipment', lane, exitCode, manifest))
     ;
   });
 };
