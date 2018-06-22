@@ -140,6 +140,8 @@ const getChosenChannelIDs = (manifest) => {
         break;
       case 'shipment_id':
         break;
+      case 'prior_manifest':
+        break;
       default:
         channels.push(manifest[key]);
         break;
