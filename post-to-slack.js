@@ -27,7 +27,7 @@ const renderInput = (values) => {
 
   slack.channels.list({ token })
     .then((res) => ( channels = res.channels ))
-    .catch((err) => console.error(err))
+    .catch((err) => error(err))
   ;
   slack.users.list({ token })
     .then((res) => {
@@ -35,7 +35,7 @@ const renderInput = (values) => {
       res.members.forEach((user) => ( latest_users.push(user) ))
       users = latest_users;
     })
-    .catch((err) => console.error(err))
+    .catch((err) => error(err))
   ;
 
   return `
@@ -191,7 +191,7 @@ const fillReferenceText = (manifest, text) => {
 
 
 const work = (lane, manifest) => {
-  let exitCode = 1;
+  let exitCode;
   let channels = getChosenChannelIDs(manifest);
   let username = manifest.username;
   let text = fillReferenceText(manifest, manifest.message);
@@ -200,14 +200,14 @@ const work = (lane, manifest) => {
   channels.forEach((channel) => {
     promises.push(slack.chat.postMessage({ token, channel, username, text })
       .then((res) => {
-        log(res)
+        log(channel, res)
         exitCode = exitCode ? exitCode : 0;
         manifest.results = manifest.results || [];
         manifest.results.push(res);
       })
       .catch((err) => {
         exitCode = exitCode || 1;
-        error(err)
+        error(channel, err)
         manifest.errors = manifest.errors || [];
         manifest.errors.push(err);
       })
@@ -215,7 +215,7 @@ const work = (lane, manifest) => {
   });
 
   Promise.all(promises).then((values) => {
-    log(values);
+    log(channels, values);
     $H.call('Lanes#end_shipment', lane, exitCode, manifest)
   });
 };
@@ -227,4 +227,5 @@ module.exports = {
   update,
   work,
 };
+
 
