@@ -179,12 +179,15 @@ const update = (lane, values) => {
 };
 
 const fillReferenceText = (manifest, text) => {
-  let referenceRegex = /\[\[([a-zA-Z0-9\.-_\+:]+)\]\]/g;
+  const referenceRegex = /\[\[([a-zA-Z0-9_.:-]+)\]\]/g;
+  const strictReferenceRegex = /\[\[\[([a-zA-Z0-9_.:-]+)\]\]\]/g;
 
-  let referencedValueText = text.replace(referenceRegex, (match, target) => {
-    let value = _.get(manifest, target);
-    if (value) return JSON.stringify(value, null, '\t');
-    return;
+  const referencedValueText = text.replace(strictReferenceRegex, (match, target) => {
+    const value = JSON.stringify(_.get(manifest, target), null, '\t');
+    return value;
+  }).replace(referenceRegex, (match, target) => {
+    const value = _.get(manifest, target);
+    return value;
   });
   return referencedValueText;
 };
