@@ -1,4 +1,9 @@
-/* eslint no-param-reassign: 0, function-paren-newline: 0, import/no-unresolved: 0 */
+/* eslint
+no-param-reassign: 0,
+function-paren-newline: 0,
+import/no-unresolved: 0,
+no-unused-vars: ["error", {"args": "after-used"}]
+*/
 /* globals $H */
 
 const name = 'post to slack';
@@ -32,7 +37,7 @@ const renderInput = (values) => {
   slack.users.list({ token })
     .then((res) => {
       let latest_users = [];
-      res.members.forEach((user) => ( latest_users.push(user) ))
+      res.members.forEach((user) => ( latest_users.push(user) ));
       users = latest_users;
     })
     .catch((err) => error(err))
@@ -108,7 +113,7 @@ const renderInput = (values) => {
 };
 
 const getChosenChannelsPretty = (manifest) => {
-  let channels = [];
+  let prettyChannels = [];
   Object.keys(manifest).forEach((key) => {
     switch (key) {
       case 'message':
@@ -123,11 +128,11 @@ const getChosenChannelsPretty = (manifest) => {
     }
   });
 
-  return channels;
-}
+  return prettyChannels;
+};
 
 const getChosenChannelIDs = (manifest) => {
-  let channels = [];
+  let channelIds = [];
   Object.keys(manifest).forEach((key) => {
     switch (key) {
       case 'message':
@@ -143,16 +148,16 @@ const getChosenChannelIDs = (manifest) => {
       case 'prior_manifest':
         break;
       default:
-        channels.push(manifest[key]);
+        channelIds.push(manifest[key]);
         break;
     }
   });
 
   return channels;
-}
+};
 
 const renderWorkPreview = (manifest) => {
-  let channels = getChosenChannelsPretty(manifest);
+  let prettyChannels = getChosenChannelsPretty(manifest);
 
   return `
     <h4>
@@ -161,8 +166,8 @@ const renderWorkPreview = (manifest) => {
           ` as username <code>${manifest.username}</code> ` :
           ' '
       }to channel${
-        channels.length > 1 ? 's' : ''
-      } <code>${channels.join('</code>, <code>')}</code>:
+        prettyChannels.length > 1 ? 's' : ''
+      } <code>${prettyChannels.join('</code>, <code>')}</code>:
     </h4>
     <pre><code>${manifest.message}</code></pre>
   `;
@@ -182,35 +187,36 @@ const fillReferenceText = (manifest, text) => {
   const referenceRegex = /\[\[([a-zA-Z0-9_.:-]+)\]\]/g;
   const strictReferenceRegex = /\[\[\[([a-zA-Z0-9_.:-]+)\]\]\]/g;
 
-  const referencedValueText = text.replace(strictReferenceRegex, (match, target) => {
-    const value = JSON.stringify(_.get(manifest, target), null, '\t');
-    return value;
-  }).replace(referenceRegex, (match, target) => {
-    const value = _.get(manifest, target);
-    return value;
-  });
-  return referencedValueText;
+  const referencedValueText = text
+    .replace(strictReferenceRegex, (match, target) => {
+      const value = JSON.stringify(_.get(manifest, target), null, '\t');
+      return value;
+    }).replace(referenceRegex, (match, target) => {
+      const value = _.get(manifest, target);
+      return value;
+    });
+  return encode(referencedValueText);
 };
 
 
 const work = (lane, manifest) => {
   let exitCode;
-  let channels = getChosenChannelIDs(manifest);
+  let channelIds = getChosenChannelIDs(manifest);
   let username = manifest.username;
   let text = fillReferenceText(manifest, manifest.message);
   let promises = [];
 
-  channels.forEach((channel) => {
+  channelIds.forEach((channel) => {
     promises.push(slack.chat.postMessage({ token, channel, username, text })
       .then((res) => {
-        log(channel, res)
+        log(channel, res);
         exitCode = exitCode ? exitCode : 0;
         manifest.results = manifest.results || [];
         manifest.results.push(res);
       })
       .catch((err) => {
         exitCode = exitCode || 1;
-        error(channel, err)
+        error(channel, err);
         manifest.errors = manifest.errors || [];
         manifest.errors.push(err);
       })
@@ -218,8 +224,8 @@ const work = (lane, manifest) => {
   });
 
   Promise.all(promises).then((values) => {
-    log(channels, values);
-    $H.call('Lanes#end_shipment', lane, exitCode, manifest)
+    log(channelIds, values);
+    $H.call('Lanes#end_shipment', lane, exitCode, manifest);
   });
 };
 
