@@ -123,7 +123,7 @@ const getChosenChannelsPretty = (manifest) => {
       case 'username':
         break;
       default:
-        channels.push(`#${key}`);
+        prettyChannels.push(`#${key}`);
         break;
     }
   });
@@ -153,7 +153,7 @@ const getChosenChannelIDs = (manifest) => {
     }
   });
 
-  return channels;
+  return channelIds;
 };
 
 const renderWorkPreview = (manifest) => {
