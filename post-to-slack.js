@@ -8,24 +8,26 @@ no-unused-vars: ["error", {"args": "after-used"}]
 
 const name = 'post to slack';
 const token = process.env.SLACK_TOKEN;
-
-require('child_process').execSync(`npm i ${[
-  'js-htmlencode',
+const pkgs = [
   'debug',
   'slack',
   'lodash',
-].join(' ')}`);
+];
 
-const log = require('debug')(`${name}:log`);
-const error = require('debug')(`${name}:error`);
-const encode = require('js-htmlencode').htmlEncode;
-const slack = require('slack');
-const _ = require('lodash');
+let log;
+let error;
+let slack;
+let _;
 
-let channels = [];
-let users = [];
+let channels = [{ name: 'Loading...' }];
+let users = [{ name: 'Loading...' }];
 
-log(`Dependencies installed for "${name}" harbor.`);
+const next = () => {
+  log = require('debug')(`${name}:log`);
+  error = require('debug')(`${name}:error`);
+  slack = require('slack');
+  _ = require('lodash');
+};
 
 const renderInput = (values) => {
   values = values || {};
@@ -45,7 +47,10 @@ const renderInput = (values) => {
 
   return `
     <style>
-      .slack-channel-list li { list-style-type: decimal; }
+      .slack-channel-list li, .slack-user-list li { list-style-type: decimal; }
+      .slack-channel-list li label input, .slack-user-list li label input {
+        margin: 0;
+      }
       .slack-channel-list input { margin-bottom: 0; }
       .slack-message-input { resize: vertical; width: 625px; }
       .slack-username { display: inline-block; width: 200px; }
@@ -97,7 +102,7 @@ const renderInput = (values) => {
           class="slack-message-input"
           placeholder="(empty)"
           required
-        >${values.message ? encode(values.message) : ''}</textarea>
+        >${values.message ? values.message : ''}</textarea>
       </div>
     </div>
     <label>
@@ -173,7 +178,7 @@ const renderWorkPreview = (manifest) => {
   `;
 };
 
-const register = () => name;
+const register = () => ({ name, pkgs });
 
 const update = (lane, values) => {
   if (! values.message) return false;
@@ -186,16 +191,23 @@ const update = (lane, values) => {
 const fillReferenceText = (manifest, text) => {
   const referenceRegex = /\[\[([a-zA-Z0-9_.:-]+)\]\]/g;
   const strictReferenceRegex = /\[\[\[([a-zA-Z0-9_.:-]+)\]\]\]/g;
+  const encodedReferenceRegex = /\{\{([a-zA-Z0-9_.:-]+)\}\}/g;
 
   const referencedValueText = text
     .replace(strictReferenceRegex, (match, target) => {
       const value = JSON.stringify(_.get(manifest, target), null, '\t');
       return value;
-    }).replace(referenceRegex, (match, target) => {
+    })
+    .replace(referenceRegex, (match, target) => {
       const value = _.get(manifest, target);
       return value;
-    });
-  return encode(referencedValueText);
+    })
+    .replace(encodedReferenceRegex, (match, target) => {
+      const value = _.get(manifest, target);
+      return encodeURIComponent(value);
+    })
+  ;
+  return referencedValueText;
 };
 
 
@@ -230,6 +242,7 @@ const work = (lane, manifest) => {
 };
 
 module.exports = {
+  next,
   render_input: renderInput,
   render_work_preview: renderWorkPreview,
   register,
